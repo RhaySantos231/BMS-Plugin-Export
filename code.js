@@ -51,19 +51,13 @@ function convertFrameToXML(frame) {
 
   const children = frame.children;
 
-  // Detecta quais nodes texto estão sobrepostos a algum EditText
   const textsSobrepostos = new Set();
-
-  // Primeiro, identifica todos os EditTexts
   const editTexts = children.filter(child => child.name.toLowerCase().startsWith('edit-'));
 
-  // Para cada texto, verifica se está sobreposto a algum EditText
   for (const child of children) {
-    // Só faz sentido para nodes com texto que não são EditText
     if ('characters' in child && child.characters && !editTexts.includes(child)) {
       for (const editText of editTexts) {
         if (isOverlapping(child, editText)) {
-          // Marca esse texto para ser ignorado na exportação
           textsSobrepostos.add(child.id);
           break;
         }
@@ -71,13 +65,39 @@ function convertFrameToXML(frame) {
     }
   }
 
-  // Agora, exporta todos, pulando os textos que estão sobrepostos a EditText
-  for (const child of children) {
-    if (textsSobrepostos.has(child.id)) {
-      // Ignora este node (não gera XML)
-      continue;
+  // 🔴 NOVO: agrupar elementos sobre RelativeLayouts
+  const processed = new Set();
+  const fundoLayouts = children.filter(child => child.name.toLowerCase().startsWith('fundo'));
+
+  for (const fundo of fundoLayouts) {
+    const groupChildren = children.filter(child => 
+      child.id !== fundo.id &&
+      isOverlapping(child, fundo) &&
+      !textsSobrepostos.has(child.id)
+    );
+
+    processed.add(fundo.id);
+    groupChildren.forEach(child => processed.add(child.id));
+
+    xml += `\n    <RelativeLayout
+      android:id="@+id/${fundo.name.replace(/\s+/g, "_")}"
+      android:layout_width="match_parent"
+      android:layout_height="${Math.round(fundo.height)}dp"
+      android:layout_marginTop="${Math.round(fundo.y)}dp"
+      android:layout_marginStart="${Math.round(fundo.x)}dp">`;
+
+    for (const child of groupChildren) {
+      xml += exportNodeToXML(child, children);
     }
-    xml += exportNodeToXML(child, children);
+
+    xml += `\n    </RelativeLayout>`;
+  }
+
+  // 🔴 Agora renderiza os filhos que não foram processados nem sobrepostos
+  for (const child of children) {
+    if (!processed.has(child.id) && !textsSobrepostos.has(child.id)) {
+      xml += exportNodeToXML(child, children);
+    }
   }
 
   xml += `\n</androidx.constraintlayout.widget.ConstraintLayout>\n`;
@@ -114,6 +134,8 @@ function exportNodeToXML(node, siblings) {
     tag = 'Button';
   } else if (name.startsWith('edit-')) {
     tag = 'EditText';
+  }else if (name.startsWith('fundo')) {
+    tag = 'RelativeLayout';
   }
 
   const id = name.replace(/\s+/g, "_");
@@ -147,6 +169,23 @@ function exportNodeToXML(node, siblings) {
       extraProps += `\n      android:hint="${hintText}"`;
     }
   }
+  if (tag === 'Button') {
+    let Text = '';
+
+    for (const other of siblings) {
+      if (other.id !== node.id && isOverlapping(other, node)) {
+        if ('characters' in other && other.characters) {
+          Text = escapeXML(other.characters);
+          break;
+        }
+      }
+    }
+
+    if (Text) {
+      extraProps += `\n      android:text="${Text}"`;
+    }
+  }
+
 
   // TextView, Button, EditText têm texto e tamanho
   if (['TextView', 'Button', 'EditText'].includes(tag)) {
