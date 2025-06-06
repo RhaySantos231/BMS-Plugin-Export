@@ -1,162 +1,193 @@
 figma.showUI(__html__, { width: 600, height: 600 });
 
-figma.ui.onmessage = async (msg) => {
+figma.ui.onmessage = function(msg) {
   if (msg.type === 'export-android') {
-    const nodes = figma.currentPage.selection;
+    var nodes = figma.currentPage.selection;
 
     if (nodes.length === 0) {
       figma.notify("Selecione ao menos um frame.");
       return;
     }
 
-    let output = '';
+    var output = '';
+    var imagens = {};
 
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i];
+    (function processNodes(i) {
+      if (i >= nodes.length) {
+        // export preview da primeira imagem
+        nodes[0].exportAsync({ format: "PNG" }).then(function(previewBytes) {
+          var previewBase64 = figma.base64Encode(previewBytes);
 
+          figma.ui.postMessage({
+            type: 'zip-package',
+            xml: output,
+            imagens: imagens,
+            preview: previewBase64
+          });
+        });
+        return;
+      }
+
+      var node = nodes[i];
       if (node.type !== "FRAME") {
         figma.notify("Selecione apenas frames.");
         return;
       }
 
-      // Exporta o frame completo (todos os filhos)
       output += convertFrameToXML(node);
 
-      // Envia progresso para UI
-      const percent = Math.round(((i + 1) / nodes.length) * 100);
-      figma.ui.postMessage({ type: 'progress', percent });
-    }
+      // imagens dentro do frame
+      var children = node.children;
+      var promises = [];
 
-    // Exporta imagem para preview
-    const imageBytes = await nodes[0].exportAsync({ format: "PNG" });
-    const imageBase64 = figma.base64Encode(imageBytes);
+      for (var j = 0; j < children.length; j++) {
+        var child = children[j];
+        var name = child.name.toLowerCase();
 
-    figma.ui.postMessage({
-      type: 'show-xml',
-      xml: output,
-      preview: imageBase64
-    });
+        if (name.indexOf('image-') === 0 || name.indexOf('icon-') === 0) {
+          (function(c) {
+            promises.push(c.exportAsync({ format: "PNG" }).then(function(imageBytes) {
+              var base64 = figma.base64Encode(imageBytes);
+              var cleanName = cleanId(c.name);
+              imagens[cleanName] = "data:image/png;base64," + base64;
+            }));
+          })(child);
+        }
+      }
+
+      Promise.all(promises).then(function() {
+        var percent = Math.round(((i + 1) / nodes.length) * 100);
+        figma.ui.postMessage({ type: 'progress', percent: percent });
+        processNodes(i + 1);
+      });
+    })(0);
   }
 };
 
-/**
- * Converte o frame para XML.
- * Detecta textos que estão sobrepostos a EditTexts e ignora na exportação.
- */
 function convertFrameToXML(frame) {
-  let xml = `<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">`;
+  var xml = '<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"\n' +
+    '    xmlns:app="http://schemas.android.com/apk/res-auto"\n' +
+    '    android:layout_width="match_parent"\n' +
+    '    android:layout_height="match_parent">';
 
-  const children = frame.children;
+  var children = frame.children;
 
-  const textsSobrepostos = new Set();
-  const editTexts = children.filter(child => child.name.toLowerCase().startsWith('edit-'));
+  var textsSobrepostos = [];
+  var editTexts = children.filter(function(c) {
+    return c.name.toLowerCase().indexOf('edit-') === 0;
+  });
 
-  for (const child of children) {
-    if ('characters' in child && child.characters && !editTexts.includes(child)) {
-      for (const editText of editTexts) {
-        if (isOverlapping(child, editText)) {
-          textsSobrepostos.add(child.id);
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i];
+    if ('characters' in child && child.characters && editTexts.indexOf(child) === -1) {
+      for (var j = 0; j < editTexts.length; j++) {
+        if (isOverlapping(child, editTexts[j])) {
+          textsSobrepostos.push(child.id);
           break;
         }
       }
     }
   }
 
-  // 🔴 NOVO: agrupar elementos sobre RelativeLayouts
-  const processed = new Set();
-  const fundoLayouts = children.filter(child => child.name.toLowerCase().startsWith('fundo'));
+  var processed = [];
+  var fundoLayouts = children.filter(function(c) {
+    return c.name.toLowerCase().indexOf('fundo') === 0;
+  });
 
-  for (const fundo of fundoLayouts) {
-    const groupChildren = children.filter(child => 
-      child.id !== fundo.id &&
-      isOverlapping(child, fundo) &&
-      !textsSobrepostos.has(child.id)
-    );
+  for (var i = 0; i < fundoLayouts.length; i++) {
+    var fundo = fundoLayouts[i];
 
-    processed.add(fundo.id);
-    groupChildren.forEach(child => processed.add(child.id));
+    var groupChildren = children.filter(function(child) {
+      return child.id !== fundo.id &&
+        isOverlapping(child, fundo) &&
+        textsSobrepostos.indexOf(child.id) === -1;
+    });
 
-    xml += `\n    <RelativeLayout
-      android:id="@+id/${fundo.name.replace(/\s+/g, "_")}"
-      android:layout_width="match_parent"
-      android:layout_height="${Math.round(fundo.height)}dp"
-      android:layout_marginTop="${Math.round(fundo.y)}dp"
-      android:layout_marginStart="${Math.round(fundo.x)}dp">`;
+    processed.push(fundo.id);
+    groupChildren.forEach(function(c) { processed.push(c.id); });
 
-    for (const child of groupChildren) {
-      xml += exportNodeToXML(child, children);
+    var backgroundColor = '';
+    if (fundo.fills && fundo.fills.length > 0) {
+      var fill = fundo.fills[0];
+      if (fill.type === 'SOLID') {
+        var hexColor = rgbToHex(fill.color.r, fill.color.g, fill.color.b);
+        backgroundColor = '\n      android:background="#' + hexColor + '"';
+      }
     }
 
-    xml += `\n    </RelativeLayout>`;
+    xml += '\n    <RelativeLayout\n' +
+      '      android:id="@+id/' + cleanId(fundo.name) + '"\n' +
+      '      android:layout_width=" '+ Math.round(fundo.width) + 'dp"\n' +
+      '      android:layout_height="' + Math.round(fundo.height) + 'dp"\n' +
+      '      android:layout_marginTop="' + Math.round(fundo.y) + 'dp"\n' +
+      '      android:layout_marginStart="' + Math.round(fundo.x) + 'dp"' + backgroundColor + '>'
+      '      app:layout_constraintTop_toTopOf="parent"' +'\n' + 
+      '      app:layout_constraintStart_toStartOf="parent"' + '\n' +
+      '      android:gravity="center_horizontal"'+'\n'+     
+      '      app:layout_constraintStart_toStartOf="parent"';
+
+    for (var k = 0; k < groupChildren.length; k++) {
+      xml += exportNodeToXML(groupChildren[k], children);
+    }
+
+    xml += '\n    </RelativeLayout>';
   }
 
-  // 🔴 Agora renderiza os filhos que não foram processados nem sobrepostos
-  for (const child of children) {
-    if (!processed.has(child.id) && !textsSobrepostos.has(child.id)) {
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i];
+    if (processed.indexOf(child.id) === -1 && textsSobrepostos.indexOf(child.id) === -1) {
       xml += exportNodeToXML(child, children);
     }
   }
 
-  xml += `\n</androidx.constraintlayout.widget.ConstraintLayout>\n`;
+  xml += '\n</androidx.constraintlayout.widget.ConstraintLayout>\n';
   return xml;
 }
 
-/**
- * Verifica se dois nodes estão se sobrepondo (interseção de retângulos).
- */
-function isOverlapping(nodeA, nodeB) {
-  const ax1 = nodeA.x;
-  const ay1 = nodeA.y;
-  const ax2 = nodeA.x + nodeA.width;
-  const ay2 = nodeA.y + nodeA.height;
-
-  const bx1 = nodeB.x;
-  const by1 = nodeB.y;
-  const bx2 = nodeB.x + nodeB.width;
-  const by2 = nodeB.y + nodeB.height;
-
+function isOverlapping(a, b) {
+  var ax1 = a.x, ay1 = a.y, ax2 = a.x + a.width, ay2 = a.y + a.height;
+  var bx1 = b.x, by1 = b.y, bx2 = b.x + b.width, by2 = b.y + b.height;
   return !(bx1 > ax2 || bx2 < ax1 || by1 > ay2 || by2 < ay1);
 }
 
 function exportNodeToXML(node, siblings) {
-  let tag = 'TextView';
-  const name = node.name.toLowerCase();
+  var tag = 'TextView';
+  var name = node.name.toLowerCase();
 
-  // Detecta tag XML personalizada se tiver pluginData
-  if (node.getPluginData('xmlTag')) {
+  if (node.getPluginData && node.getPluginData('xmlTag')) {
     tag = node.getPluginData('xmlTag');
-  } else if (name.startsWith('image-')) {
+  } else if (name.indexOf('image-') === 0 || name.indexOf('icon-') === 0) {
     tag = 'ImageView';
-  } else if (name.startsWith('button-')) {
+  } else if (name.indexOf('button-') === 0) {
     tag = 'Button';
-  } else if (name.startsWith('edit-')) {
+  } else if (name.indexOf('edit-') === 0) {
     tag = 'EditText';
-  }else if (name.startsWith('fundo')) {
+  } else if (name.indexOf('fundo') === 0) {
     tag = 'RelativeLayout';
   }
 
-  const id = name.replace(/\s+/g, "_");
+  var id = cleanId(name);
+  var width = Math.round(node.width);
+  var height = Math.round(node.height);
+  var x = Math.round(node.x);
+  var y = Math.round(node.y);
+  var content = ('characters' in node && node.characters) ? escapeXML(node.characters) : '';
 
-  let content = '';
-  if ('characters' in node && node.characters) {
-    content = escapeXML(node.characters);
+  var extraProps = '';
+
+  // RelativeLayout background handled here only for individual RelativeLayouts
+  if (tag === 'RelativeLayout' && node.fills && node.fills.length > 0) {
+    var fill = node.fills[0];
+    if (fill.type === 'SOLID') {
+      var hexColor = rgbToHex(fill.color.r, fill.color.g, fill.color.b);
+      extraProps += '\n      android:background="#' + hexColor + '"';
+    }
   }
 
-  const width = Math.round(node.width);
-  const height = Math.round(node.height);
-  const x = Math.round(node.x);
-  const y = Math.round(node.y);
-
-  let extraProps = '';
-
-  // Para EditText, detecta hint baseado em node sobreposto com texto
   if (tag === 'EditText') {
-    let hintText = '';
-
-    for (const other of siblings) {
+    var hintText = '';
+    for (var i = 0; i < siblings.length; i++) {
+      var other = siblings[i];
       if (other.id !== node.id && isOverlapping(other, node)) {
         if ('characters' in other && other.characters) {
           hintText = escapeXML(other.characters);
@@ -164,57 +195,39 @@ function exportNodeToXML(node, siblings) {
         }
       }
     }
-
-    if (hintText) {
-      extraProps += `\n      android:hint="${hintText}"`;
-    }
-  }
-  if (tag === 'Button') {
-    let Text = '';
-
-    for (const other of siblings) {
-      if (other.id !== node.id && isOverlapping(other, node)) {
-        if ('characters' in other && other.characters) {
-          Text = escapeXML(other.characters);
-          break;
-        }
-      }
-    }
-
-    if (Text) {
-      extraProps += `\n      android:text="${Text}"`;
-    }
+    if (hintText) extraProps += '\n      android:hint="' + hintText + '"';
   }
 
-
-  // TextView, Button, EditText têm texto e tamanho
-  if (['TextView', 'Button', 'EditText'].includes(tag)) {
-    extraProps += `\n      android:text="${content}"`;
-    extraProps += `\n      android:textSize="14sp"`;
+  if (tag === 'Button' || tag === 'TextView') {
+    if (content) extraProps += '\n      android:text="' + content + '"';
+    extraProps += '\n      android:textSize="14sp"';
   }
 
   if (tag === 'ImageView') {
-    extraProps += `\n      android:src="@drawable/${id}"`;
-    extraProps += `\n      android:scaleType="centerCrop"`;
+    extraProps += '\n      android:src="@drawable/' + id + '"';
+    extraProps += '\n      android:scaleType="centerCrop"';
   }
 
   if (tag === 'EditText' && node.fills && node.fills.length > 0) {
-    const fill = node.fills[0];
+    var fill = node.fills[0];
     if (fill.type === 'SOLID') {
-      const color = fill.color;
-      const hexColor = rgbToHex(color.r, color.g, color.b);
-      extraProps += `\n      android:background="#${hexColor}"`;
+      var hexColor = rgbToHex(fill.color.r, fill.color.g, fill.color.b);
+      extraProps += '\n      android:background="#' + hexColor + '"';
     }
   }
 
-  return `\n    <${tag}
-      android:id="@+id/${id}"
-      android:layout_width="${width}dp"
-      android:layout_height="${height}dp"
-      app:layout_constraintTop_toTopOf="parent"
-      app:layout_constraintStart_toStartOf="parent"
-      android:layout_marginTop="${y}dp"
-      android:layout_marginStart="${x}dp"${extraProps} />`;
+  return '\n    <' + tag +
+    '\n      android:id="@+id/' + id + '"' +
+    '\n      android:layout_width="' + width + 'dp"' +
+    '\n      android:layout_height="' + height + 'dp"' +
+    '\n      app:layout_constraintTop_toTopOf="parent"' +
+    '\n      app:layout_constraintStart_toStartOf="parent"' +
+    '\n      android:layout_marginTop="' + y + 'dp"' +
+    '\n      android:layout_marginStart="' + x + 'dp"' + extraProps + ' />';
+}
+
+function cleanId(name) {
+  return name.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, '');
 }
 
 function escapeXML(str) {
@@ -226,6 +239,9 @@ function escapeXML(str) {
 }
 
 function rgbToHex(r, g, b) {
-  const to255 = (v) => Math.round(v * 255);
-  return [r, g, b].map(to255).map(x => x.toString(16).padStart(2, '0')).join('');
+  function toHex(c) {
+    var h = Math.round(c * 255).toString(16);
+    return h.length == 1 ? "0" + h : h;
+  }
+  return toHex(r) + toHex(g) + toHex(b);
 }

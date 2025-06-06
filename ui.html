@@ -1,59 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-    <link rel="icon" href="image/favicon.ico" type="image/x-icon" />
-  <title>Android Figma Export</title>
+  <title>Exportador Android Figma</title>
+  <link rel="icon" href="image/favicon.ico" type="image/x-icon" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 </head>
-<body class="p-4 text-gray-800">
-  <h3 class="text-xl font-bold mb-4">Exportar para Android</h3>
-  <button id="export" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Exportar</button>
+<body class="bg-gray-50 p-6 text-gray-800 font-sans">
+  <h1 class="text-2xl font-bold mb-4">Exportar layout para Android</h1>
+
+  <button id="export" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded shadow">
+    Exportar
+  </button>
+
   <div id="alert" class="mt-4 text-green-600 font-semibold"></div>
 
-  <div id="progress-container" style="display:none; margin-top: 10px;">
-  <div style="font-size: 14px;">Exportando: <span id="progress-value">0%</span></div>
-  <div style="background: #ddd; height: 8px; border-radius: 4px; overflow: hidden;">
-    <div id="progress-bar" style="height: 100%; width: 0%; background: #4CAF50;"></div>
-  </div>
-</div>
-
-  <div id="preview-container" class="mt-4">
-    <h4 class="font-semibold mb-2">Pré-visualização:</h4>
-    <img id="preview-image" class="border rounded max-w-full" />
+  <div id="progress-container" class="hidden mt-4">
+    <div class="text-sm mb-1">Exportando: <span id="progress-value">0%</span></div>
+    <div class="w-full bg-gray-300 rounded h-3 overflow-hidden">
+      <div id="progress-bar" class="h-3 bg-green-500 w-0"></div>
+    </div>
   </div>
 
-  <div id="xml-container" class="mt-4">
-    <h4 class="font-semibold mb-2">XML Gerado:</h4>
-    <pre id="xml-output" class="bg-gray-100 p-2 rounded text-xs overflow-auto"></pre>
-  </div>
+  <section id="preview-container" class="mt-6">
+    <h2 class="text-lg font-semibold mb-2">Pré-visualização</h2>
+    <img id="preview-image" class="border rounded max-w-full shadow" alt="Prévia do frame" />
+  </section>
 
- <script>
-  document.addEventListener("DOMContentLoaded", () => {
+  <section id="xml-container" class="mt-6 max-h-60 overflow-auto bg-white rounded p-4 border shadow">
+    <h2 class="text-lg font-semibold mb-2">XML Gerado</h2>
+    <pre id="xml-output" class="text-xs font-mono whitespace-pre-wrap"></pre>
+  </section>
+
+  <section id="download-container" class="mt-6 hidden">
+    <a id="download-link" 
+       class="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow" 
+       href="#" download="android-export.zip">
+      Baixar ZIP
+    </a>
+  </section>
+
+  <script>
     document.getElementById("export").onclick = () => {
       parent.postMessage({ pluginMessage: { type: 'export-android' } }, '*');
       document.getElementById("alert").textContent = "Exportando...";
-      document.getElementById("progress-container").style.display = 'block';
+      document.getElementById("progress-container").classList.remove('hidden');
+      document.getElementById("download-container").classList.add('hidden');
+      document.getElementById("progress-bar").style.width = "0%";
+      document.getElementById("progress-value").textContent = "0%";
+      document.getElementById("xml-output").textContent = "";
+      document.getElementById("preview-image").src = "";
     };
 
-    onmessage = (event) => {
+    window.onmessage = async (event) => {
       const msg = event.data.pluginMessage;
       if (!msg) return;
 
       if (msg.type === 'progress') {
         document.getElementById('progress-bar').style.width = msg.percent + '%';
-        document.getElementById('progress-value').innerText = msg.percent + '%';
+        document.getElementById('progress-value').textContent = msg.percent + '%';
       }
 
-      if (msg.type === 'show-xml') {
+      if (msg.type === 'zip-package') {
+        document.getElementById("alert").textContent = "Exportação concluída.";
+        document.getElementById("progress-container").classList.add('hidden');
+
         document.getElementById("xml-output").textContent = msg.xml;
         document.getElementById("preview-image").src = "data:image/png;base64," + msg.preview;
-        document.getElementById("alert").textContent = "Exportação concluída.";
-        document.getElementById("progress-container").style.display = 'none';
+
+        const zip = new JSZip();
+        zip.file("layout.xml", msg.xml);
+
+        const drawable = zip.folder("drawable");
+        for (const [name, base64] of Object.entries(msg.imagens)) {
+          const cleanName = name.toLowerCase();
+          const data = base64.split(',')[1]; // remove prefixo base64
+          drawable.file(`${cleanName}.png`, data, { base64: true });
+        }
+
+        const blob = await zip.generateAsync({ type: "blob" });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.getElementById("download-link");
+        link.href = url;
+        link.download = "android-export.zip";
+
+        document.getElementById("download-container").classList.remove('hidden');
       }
     };
-  });
-</script>
-
+  </script>
 </body>
 </html>
