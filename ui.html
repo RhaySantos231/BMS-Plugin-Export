@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+    <link rel="icon" href="image/favicon.ico" type="image/x-icon" />
+  <title>Android Figma Export</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-4 text-gray-800">
+  <h3 class="text-xl font-bold mb-4">Exportar para Android</h3>
+  <button id="export" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Exportar</button>
+  <div id="alert" class="mt-4 text-green-600 font-semibold"></div>
+
+  <div id="progress-container" style="display:none; margin-top: 10px;">
+  <div style="font-size: 14px;">Exportando: <span id="progress-value">0%</span></div>
+  <div style="background: #ddd; height: 8px; border-radius: 4px; overflow: hidden;">
+    <div id="progress-bar" style="height: 100%; width: 0%; background: #4CAF50;"></div>
+  </div>
+</div>
+
+  <div id="preview-container" class="mt-4">
+    <h4 class="font-semibold mb-2">Pré-visualização:</h4>
+    <img id="preview-image" class="border rounded max-w-full" />
+  </div>
+
+  <div id="xml-container" class="mt-4">
+    <h4 class="font-semibold mb-2">XML Gerado:</h4>
+    <pre id="xml-output" class="bg-gray-100 p-2 rounded text-xs overflow-auto"></pre>
+  </div>
+
+ <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("export").onclick = () => {
+      parent.postMessage({ pluginMessage: { type: 'export-android' } }, '*');
+      document.getElementById("alert").textContent = "Exportando...";
+      document.getElementById("progress-container").style.display = 'block';
+    };
+
+    onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      if (msg.type === 'progress') {
+        document.getElementById('progress-bar').style.width = msg.percent + '%';
+        document.getElementById('progress-value').innerText = msg.percent + '%';
+      }
+
+      if (msg.type === 'show-xml') {
+        document.getElementById("xml-output").textContent = msg.xml;
+        document.getElementById("preview-image").src = "data:image/png;base64," + msg.preview;
+        document.getElementById("alert").textContent = "Exportação concluída.";
+        document.getElementById("progress-container").style.display = 'none';
+      }
+    };
+  });
+</script>
+
+</body>
+</html>
