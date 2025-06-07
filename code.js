@@ -234,7 +234,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
     tag = node.getPluginData('xmlTag');
   } else if (name.startsWith('image-button-')) {  // <-- mover essa condição antes de 'image-'
     tag = 'ImageButton';
-  } else if (name.startsWith('image-') || name.startsWith('icon-')) {
+  } else if (name.startsWith('image-')) {
     tag = 'ImageView';
   } else if (name.startsWith('button-')) {
     tag = 'Button';
