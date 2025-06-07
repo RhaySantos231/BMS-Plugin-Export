@@ -117,12 +117,12 @@ function convertFrameToXML(frame) {
 
     xml += '\n    <RelativeLayout\n' +
       '      android:id="@+id/' + cleanId(fundo.name) + '"\n' +
-      '      android:layout_width=" '+ Math.round(fundo.width) + 'dp"\n' +
+      '      android:layout_width="'+ Math.round(fundo.width) + 'dp"\n' +
       '      android:layout_height="' + Math.round(fundo.height) + 'dp"\n' +
       '      android:layout_marginTop="' + Math.round(fundo.y) + 'dp"\n' +
       '      android:layout_marginStart="' + Math.round(fundo.x) + 'dp"' + backgroundColor + '>'
       '      app:layout_constraintTop_toTopOf="parent"' +'\n' + 
-      '      app:layout_constraintStart_toStartOf="parent"' + '\n' +
+      '      app:layout_constraintEnd_toEndf="parent"' + '\n' +
       '      android:gravity="center_horizontal"'+'\n'+     
       '      app:layout_constraintStart_toStartOf="parent"';
 
