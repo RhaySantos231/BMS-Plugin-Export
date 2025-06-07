@@ -29,15 +29,15 @@
   </section>
 
   <section id="xml-container" class="mt-6 max-h-60 overflow-auto bg-white rounded p-4 border shadow">
-    <h2 class="text-lg font-semibold mb-2">XML Gerado</h2>
-    <pre id="xml-output" class="text-xs font-mono whitespace-pre-wrap"></pre>
+    <h2 class="text-lg font-semibold mb-2">Arquivos XML Gerados</h2>
+    <div id="xml-list" class="space-y-4"></div>
   </section>
 
   <section id="download-container" class="mt-6 hidden">
     <a id="download-link" 
        class="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow" 
        href="#" download="android-export.zip">
-      Baixar ZIP
+      Baixar ZIP com todos arquivos
     </a>
   </section>
 
@@ -49,7 +49,7 @@
       document.getElementById("download-container").classList.add('hidden');
       document.getElementById("progress-bar").style.width = "0%";
       document.getElementById("progress-value").textContent = "0%";
-      document.getElementById("xml-output").textContent = "";
+      document.getElementById("xml-list").innerHTML = "";
       document.getElementById("preview-image").src = "";
     };
 
@@ -66,11 +66,55 @@
         document.getElementById("alert").textContent = "Exportação concluída.";
         document.getElementById("progress-container").classList.add('hidden');
 
-        document.getElementById("xml-output").textContent = msg.xml;
-        document.getElementById("preview-image").src = "data:image/png;base64," + msg.preview;
+        const xmls = msg.xmls; // Objeto com vários XMLs: { "nome.xml": "conteudo", ... }
+        const xmlList = document.getElementById("xml-list");
 
+        // Mostrar preview da primeira tela
+        if (msg.preview) {
+          document.getElementById("preview-image").src = "data:image/png;base64," + msg.preview;
+        }
+
+        // Limpa lista antes
+        xmlList.innerHTML = '';
+
+        // Para cada XML, cria pre + botão de download individual
+        for (const [fileName, content] of Object.entries(xmls)) {
+          const container = document.createElement('div');
+          container.classList.add('border', 'rounded', 'p-2', 'bg-gray-100', 'shadow');
+
+          const title = document.createElement('h3');
+          title.textContent = fileName;
+          title.classList.add('font-semibold', 'mb-1');
+          container.appendChild(title);
+
+          const pre = document.createElement('pre');
+          pre.textContent = content;
+          pre.classList.add('text-xs', 'font-mono', 'whitespace-pre-wrap', 'max-h-48', 'overflow-auto', 'mb-2');
+          container.appendChild(pre);
+
+          const btn = document.createElement('button');
+          btn.textContent = 'Baixar XML';
+          btn.className = 'bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded shadow';
+          btn.onclick = () => {
+            const blob = new Blob([content], { type: 'text/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(url);
+          };
+          container.appendChild(btn);
+
+          xmlList.appendChild(container);
+        }
+
+        // Montar ZIP com todos XMLs + imagens
         const zip = new JSZip();
-        zip.file("layout.xml", msg.xml);
+        const xmlFolder = zip.folder("xml");
+        for (const [fileName, content] of Object.entries(xmls)) {
+          xmlFolder.file(fileName, content);
+        }
 
         const drawable = zip.folder("drawable");
         for (const [name, base64] of Object.entries(msg.imagens)) {
@@ -85,7 +129,6 @@
         const link = document.getElementById("download-link");
         link.href = url;
         link.download = "android-export.zip";
-
         document.getElementById("download-container").classList.remove('hidden');
       }
     };
