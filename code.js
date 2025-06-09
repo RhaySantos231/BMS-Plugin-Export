@@ -273,7 +273,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
           const hintText = escapeXML(other.characters);
            extraProps += `\n      android:hint="${hintText}"`;
            extraProps += `\n      android:padding="10dp"`;
-           extraProps += `\n      android:padding="15dp"`;
+           extraProps += `\n      android:paddingStart="15dp"`;
           break;
         }
       }
