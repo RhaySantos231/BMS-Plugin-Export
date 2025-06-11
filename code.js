@@ -232,17 +232,17 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
   // Corrigido: condição de 'image-button-' deve vir antes de 'image-' para não ser capturado como ImageView
   if (node.getPluginData && node.getPluginData('xmlTag')) {
     tag = node.getPluginData('xmlTag');
-  } else if (name.startsWith('image-button-')) {  // <-- mover essa condição antes de 'image-'
+  } else if (name.startsWith('image-button-')||name.startsWith('imagebtn')) {  
     tag = 'ImageButton';
-  } else if (name.startsWith('image-')) {
+  } else if (name.startsWith('image-')||name.startsWith('image')|| name.startsWith('Image')||name.startsWith('img')) {
     tag = 'ImageView';
-  } else if (name.startsWith('button-')) {
+  } else if (name.startsWith('button-') || name.startsWith('button')||name.startsWith('btn')) {
     tag = 'Button';
-  } else if (name.startsWith('edit-')) {
+  } else if (name.startsWith('edit-')|| name.startsWith('edit') || name.startsWith('Edit')) {
     tag = 'EditText';
-  } else if (name.startsWith('nav-')) {
+  } else if (name.startsWith('nav-')|| name.startsWith('nav')) {
     tag = 'RelativeLayout';
-  } else if (name.startsWith('static-')) {
+  } else if (name.startsWith('static-')|| name.startsWith('fundo')) {
     tag = 'View';
   }
 
