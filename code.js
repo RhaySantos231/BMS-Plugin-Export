@@ -147,6 +147,7 @@ function convertFrameToXML(frame) {
       `\n      app:layout_constraintTop_toTopOf="parent"` +
       `\n      app:layout_constraintStart_toStartOf="parent"` +
       `\n      app:layout_constraintEnd_toEndOf="parent"` +
+      `\n      app:layout_constraintBotton_toBottonOf="parent"` +
       `${backgroundColor}>`;
 
     // Exportar cada filho dentro do nav- usando exportNodeToXML
@@ -196,6 +197,7 @@ function convertFrameToXML(frame) {
       `\n      app:layout_constraintTop_toTopOf="parent"` +
       `\n      app:layout_constraintStart_toStartOf="parent"` +
       `\n      app:layout_constraintEnd_toEndOf="parent"` +
+      `\n      app:layout_constraintBotton_toBottonOf="parent"` +
       `${backgroundColor}>`;
 
     filhosFundo.forEach(filho => {
@@ -215,6 +217,7 @@ function convertFrameToXML(frame) {
   xml += '\n</androidx.constraintlayout.widget.ConstraintLayout>\n';
   return xml;
 }
+
 function isOverlapping(a, b, tolerance = 2) {
   const ax1 = a.x, ay1 = a.y, ax2 = a.x + a.width, ay2 = a.y + a.height;
   const bx1 = b.x, by1 = b.y, bx2 = b.x + b.width, by2 = b.y + b.height;
@@ -286,6 +289,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
         if ('characters' in other && other.characters) {
           const Text = escapeXML(other.characters);
           extraProps += `\n      android:text="${Text}"`;
+          extraProps += `\n      app:layout_constraintEnd_toEndOf="parent"`;
           textsSobrepostos.push(other.id);
           processed.push(other.id);
           break;
@@ -323,6 +327,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
   if (tag === 'ImageButton') {
     const src = getImageSrcFromOverlap(node, siblings, processed, id);
     extraProps += `\n      android:src="${src}"`;
+    extraProps += `\n      app:layout_constraintEnd_toEndOf="parent"`;
   }
 
 
@@ -330,6 +335,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
   if (tag === 'ImageView') {
     extraProps += `\n      android:src="@drawable/${id}"`;
     extraProps += `\n      android:scaleType="centerCrop"`;
+    
   }
 
   return `\n    <${tag}` +
@@ -338,7 +344,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
     `\n      android:layout_height="${height}dp"` +
     `\n      app:layout_constraintTop_toTopOf="parent"` +
     `\n      app:layout_constraintStart_toStartOf="parent"` +
-    `\n      app:layout_constraintEnd_toEndOf="parent"` + // Corrigido 'Endt' para 'End'
+   
     `\n      android:layout_marginTop="${y}dp"` +
     `\n      android:layout_marginStart="${x}dp"` +
     `${extraProps} />`;
