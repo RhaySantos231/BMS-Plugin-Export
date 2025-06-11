@@ -277,6 +277,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
            extraProps += `\n      android:hint="${hintText}"`;
            extraProps += `\n      android:padding="10dp"`;
            extraProps += `\n      android:paddingStart="15dp"`;
+           extraProps +=  `\n      android:layout_width="${width}dp"`;
           break;
         }
       }
@@ -289,7 +290,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
         if ('characters' in other && other.characters) {
           const Text = escapeXML(other.characters);
           extraProps += `\n      android:text="${Text}"`;
-          extraProps += `\n      app:layout_constraintEnd_toEndOf="parent"`;
+          
           textsSobrepostos.push(other.id);
           processed.push(other.id);
           break;
@@ -300,6 +301,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
 
  if (tag === 'Button' || tag === 'TextView') {
   if (content) extraProps += `\n      android:text="${content}"`;
+   
 
   // Pega o fontSize do node (ou usa 14sp padrão)
   let fontSize = 14;
@@ -311,7 +313,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
   fontSize = Math.round(fontSize);
 
   // Pega a cor do texto
-  let fontColor = '000000';
+  let fontColor = 'ffffff';
   if (node.fills && node.fills.length > 0) {
     const fill = node.fills[0];
     if (fill.type === 'SOLID') {
@@ -328,6 +330,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
     const src = getImageSrcFromOverlap(node, siblings, processed, id);
     extraProps += `\n      android:src="${src}"`;
     extraProps += `\n      app:layout_constraintEnd_toEndOf="parent"`;
+    extraProps +=  `\n      android:layout_width="${width}dp"`;
   }
 
 
@@ -335,12 +338,16 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
   if (tag === 'ImageView') {
     extraProps += `\n      android:src="@drawable/${id}"`;
     extraProps += `\n      android:scaleType="centerCrop"`;
-    
+    extraProps +=  `\n      android:layout_width="${width}dp"`;
+
+  }
+  if(tag == 'TextView'){
+    extraProps += `\n    android:layout_width="wrap_content"`;
   }
 
   return `\n    <${tag}` +
     `\n      android:id="@+id/${id}"` +
-    `\n      android:layout_width="${width}dp"` +
+    // `\n      android:layout_width="${width}dp"` +
     `\n      android:layout_height="${height}dp"` +
     `\n      app:layout_constraintTop_toTopOf="parent"` +
     `\n      app:layout_constraintStart_toStartOf="parent"` +
