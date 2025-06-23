@@ -8,6 +8,28 @@ document.getElementById("export").onclick = () => {
     alert.textContent = "Exportando...";
   }
 };
+figma.ui.postMessage({
+  type: 'frames-detected',
+  frames: [
+    {
+      nome: "TelaLogin",
+      preview: "base64daImagem",
+      elementos: [
+        { nome: "input-email", tipo: "EditText" },
+        { nome: "input-senha", tipo: "EditText" },
+      ]
+    },
+    {
+      nome: "TelaCadastro",
+      preview: "base64daImagem",
+      elementos: [
+        { nome: "input-nome", tipo: "EditText" },
+        { nome: "button-cadastrar", tipo: "Button" },
+      ]
+    }
+  ]
+});
+
 
 window.onmessage = (event) => {
   const msg = event.data.pluginMessage;
