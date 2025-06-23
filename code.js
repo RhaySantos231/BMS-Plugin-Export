@@ -126,7 +126,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
     tag = 'ImageView';
   } else if (name.startsWith('button-') || name.startsWith('btn')) {
     tag = 'Button';
-  } else if (name.startsWith('edit-') || name.startsWith('input-')) {
+  } else if (name.startsWith('edit-') || name.startsWith('input-')|| name.startsWith('edit')) {
     tag = 'EditText';
   } else if (name.startsWith('nav-')) {
     tag = 'RelativeLayout';
