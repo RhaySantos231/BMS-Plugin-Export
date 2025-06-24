@@ -20,7 +20,6 @@ function rgbToHex(r, g, b) {
   return toHex(r) + toHex(g) + toHex(b);
 }
 
-// Função para detectar se dois nodes se sobrepõem (com tolerância)
 function isOverlapping(a, b, tolerance = 2) {
   const ax1 = a.x, ay1 = a.y, ax2 = a.x + a.width, ay2 = a.y + a.height;
   const bx1 = b.x, by1 = b.y, bx2 = b.x + b.width, by2 = b.y + b.height;
@@ -31,7 +30,6 @@ function isOverlapping(a, b, tolerance = 2) {
            by2 + tolerance < ay1);
 }
 
-// Função para detectar textos que estão sobrepostos a EditTexts e que devem ser ignorados na lista
 function getTextsSobrepostos(children) {
   const editTexts = children.filter(c => c.name.toLowerCase().startsWith('edit-') || c.name.toLowerCase().startsWith('input-'));
   const textsToIgnore = new Set();
@@ -56,7 +54,6 @@ async function exportFrames(selection) {
     const previewBytes = await frame.exportAsync({ format: "PNG" });
     const preview = figma.base64Encode(previewBytes);
 
-    // Detectar elementos filhos e tipos baseados no nome
     const elementos = frame.children.map(child => {
       const lowerName = child.name.toLowerCase();
       let tipo = "View";
@@ -69,7 +66,6 @@ async function exportFrames(selection) {
       return { nome: child.name, tipo };
     });
 
-    // --- AQUI, gerar o objeto imagensBase64 ---
     const imagensBase64 = {};
     for (const child of frame.children) {
       const lowerName = child.name.toLowerCase();
@@ -83,15 +79,13 @@ async function exportFrames(selection) {
       nome: frame.name,
       preview,
       elementos,
-      imagensBase64 // envia junto as imagens das children
+      imagensBase64
     });
   }
 
   return frames;
 }
 
-
-// Função que converte um frame em XML para Android, aproveitando as sobreposições para hint do EditText
 function convertFrameToXML(frame) {
   const children = frame.children;
   const textsSobrepostos = Array.from(getTextsSobrepostos(children));
@@ -102,10 +96,8 @@ function convertFrameToXML(frame) {
     android:layout_width="match_parent"
     android:layout_height="match_parent">`;
 
-  // Exporta todos filhos que não são textos sobrepostos
   children.forEach(child => {
-    if (textsSobrepostos.includes(child.id)) return; // Ignorar texto sobreposto
-
+    if (textsSobrepostos.includes(child.id)) return;
     xml += exportNodeToXML(child, children, textsSobrepostos, processed);
   });
 
@@ -113,7 +105,6 @@ function convertFrameToXML(frame) {
   return xml;
 }
 
-// Função que exporta um node para XML android
 function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) {
   let tag = 'TextView';
   const name = node.name.toLowerCase();
@@ -126,7 +117,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
     tag = 'ImageView';
   } else if (name.startsWith('button-') || name.startsWith('btn')) {
     tag = 'Button';
-  } else if (name.startsWith('edit-') || name.startsWith('input-')|| name.startsWith('edit')) {
+  } else if (name.startsWith('edit-') || name.startsWith('input-') || name.startsWith('edit')) {
     tag = 'EditText';
   } else if (name.startsWith('nav-')) {
     tag = 'RelativeLayout';
@@ -145,7 +136,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
 
   let extraProps = '';
 
-  if ((tag === 'RelativeLayout' || tag === 'View' || tag === 'EditText' || tag === 'Button' || tag === 'ImageButton') &&
+  if ((tag === 'RelativeLayout' || tag === 'View' || tag === 'EditText'  || tag === 'ImageButton') &&
       node.fills && node.fills.length > 0) {
     const fill = node.fills[0];
     if (fill.type === 'SOLID') {
@@ -153,19 +144,29 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
       extraProps += `\n      android:background="#${hexColor}"`;
     }
   }
-
+ if ((tag === 'Button') &&
+      node.fills && node.fills.length > 0) {
+    const fill = node.fills[0];
+    if (fill.type === 'SOLID') {
+      const hexColor = rgbToHex(fill.color.r, fill.color.g, fill.color.b);
+      extraProps += `\n      android:backgroundTint="#${hexColor}"`;
+    }
+  }
   if (tag === 'EditText') {
-    // Procura hint entre filhos sobrepostos
     for (const other of siblings) {
-      if (other.id !== node.id && isOverlapping(other, node) && !textsSobrepostos.includes(other.id)) {
-        if ('characters' in other && other.characters) {
-          const hintText = escapeXML(other.characters);
-          extraProps += `\n      android:hint="${hintText}"`;
-          extraProps += `\n      android:padding="10dp"`;
-          extraProps += `\n      android:paddingStart="15dp"`;
-          extraProps += `\n      android:layout_width="${width}dp"`;
-          break;
-        }
+      // 🟢 CORREÇÃO AQUI: Agora só pega texto que esteja na lista de sobrepostos
+      if (
+        other.id !== node.id &&
+        isOverlapping(other, node) &&
+        textsSobrepostos.includes(other.id) &&           // ✅ Alterado aqui
+        'characters' in other
+      ) {
+        const hintText = escapeXML(other.characters);
+        extraProps += `\n      android:hint="${hintText}"`;
+        extraProps += `\n      android:padding="10dp"`;
+        extraProps += `\n      android:paddingStart="15dp"`;
+        extraProps += `\n      android:layout_width="${width}dp"`;
+        break;
       }
     }
   }
@@ -176,6 +177,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
         if ('characters' in other && other.characters) {
           const Text = escapeXML(other.characters);
           extraProps += `\n      android:text="${Text}"`;
+          extraProps += `\n      android:layout_width="${width}dp"`;
           textsSobrepostos.push(other.id);
           processed.push(other.id);
           break;
@@ -184,30 +186,30 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
     }
   }
 
-  if (tag === 'Button' || tag === 'TextView') {
-    if (content) extraProps += `\n      android:text="${content}"`;
+if (tag === 'Button' || tag === 'TextView') {
+  if (content) extraProps += `\n      android:text="${content}"`;
 
-    // Pega o fontSize do node (ou usa 14sp padrão)
-    let fontSize = 14;
-    if ('fontSize' in node && node.fontSize) {
-      fontSize = node.fontSize;
-    } else if (node.getRangeFontSize) {
-      fontSize = node.getRangeFontSize(0, 1);
-    }
-    fontSize = Math.round(fontSize);
-
-    // Pega a cor do texto
-    let fontColor = '000000';
-    if (node.fills && node.fills.length > 0) {
-      const fill = node.fills[0];
-      if (fill.type === 'SOLID') {
-        fontColor = rgbToHex(fill.color.r, fill.color.g, fill.color.b);
-      }
-    }
-
-    extraProps += `\n      android:textSize="${fontSize}sp"`;
-    extraProps += `\n      android:textColor="#${fontColor}"`;
+  let fontSize = 14;
+  if ('fontSize' in node && node.fontSize) {
+    fontSize = node.fontSize;
+  } else if (node.getRangeFontSize) {
+    fontSize = node.getRangeFontSize(0, 1);
   }
+  fontSize = Math.round(fontSize);
+
+  let fontColor = '000000';
+  // 🟢 CORREÇÃO: Só pegar a cor se for um node de texto (com characters)
+  if ('characters' in node && node.fills && node.fills.length > 0) {
+    const fill = node.fills[0];
+    if (fill.type === 'SOLID') {
+      fontColor = rgbToHex(fill.color.r, fill.color.g, fill.color.b);
+    }
+  }
+
+  extraProps += `\n      android:textSize="${fontSize}sp"`;
+  extraProps += `\n      android:textColor="#${fontColor}"`;
+}
+
 
   if (tag === 'ImageButton') {
     const src = getImageSrcFromOverlap(node, siblings, processed, id);
@@ -243,10 +245,10 @@ function getImageSrcFromOverlap(node, siblings, processed, fallbackId) {
       other.id !== node.id &&
       (otherName.startsWith("icon-") || otherName.startsWith("image-")) &&
       isOverlapping(other, node) &&
-      !processed.includes(other.id) // evita reusar a mesma imagem
+      !processed.includes(other.id)
     ) {
       const imageId = cleanId(other.name);
-      processed.push(other.id); // evita duplicação no XML
+      processed.push(other.id);
       return `@drawable/${imageId}`;
     }
   }
@@ -263,11 +265,9 @@ figma.ui.onmessage = async (msg) => {
       return;
     }
 
-    // Exporta frames com preview, elementos e imagens para UI
     const frames = await exportFrames(selection);
     figma.ui.postMessage({ type: "frames-detected", frames });
 
-    // Agora gera XMLs e imagens para o ZIP
     const xmls = {};
     const imagens = {};
     for (let i = 0; i < selection.length; i++) {
@@ -275,7 +275,6 @@ figma.ui.onmessage = async (msg) => {
       const frameName = cleanId(frame.name);
       xmls[`${frameName}.xml`] = convertFrameToXML(frame);
 
-      // Exporta imagens (filhos com prefixo image- ou icon-)
       for (const child of frame.children) {
         const lowerName = child.name.toLowerCase();
         if (lowerName.startsWith("image-") || lowerName.startsWith("icon-")) {
@@ -285,16 +284,13 @@ figma.ui.onmessage = async (msg) => {
         }
       }
 
-      // Envia progresso para a UI
       const percent = Math.round(((i + 1) / selection.length) * 100);
       figma.ui.postMessage({ type: "progress", percent });
     }
 
-    // Exporta preview geral (da primeira tela selecionada)
     const previewBytes = await selection[0].exportAsync({ format: "PNG" });
     const preview = figma.base64Encode(previewBytes);
 
-    // Envia ZIP com todos os arquivos para UI
     figma.ui.postMessage({
       type: "zip-package",
       xmls,
