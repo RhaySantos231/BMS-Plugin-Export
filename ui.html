@@ -7,54 +7,60 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 </head>
-<body class="bg-gray-50 p-6 text-gray-800 font-sans">
-  <div class="flex justify-between items-center mb-4">
-    <h1 class="text-2xl font-bold">Exportar layout para Android</h1>
-    <button id="export" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded shadow">
-      Exportar
-    </button>
-  </div>
+<body class="bg-gradient-to-b from-white to-gray-100 p-8 text-gray-800 font-sans min-h-screen">
+  <div class="max-w-6xl mx-auto">
+    <header class="flex justify-between items-center mb-8 border-b pb-4">
+      <h1 class="text-3xl font-extrabold text-blue-700">Figma for Android</h1>
+      <div class="flex gap-2">
+        <button hrel="images-only-container" id="export" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-full shadow">Exportar</button>
+        <button id="export-images" class="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-full shadow">Exportar Apenas Imagens</button>
+      </div>
+    </header>
 
-  <div id="alert" class="mt-2 text-green-600 font-semibold"></div>
+    <div id="alert" class="text-green-700 font-semibold mb-4"></div>
 
-  <div id="progress-container" class="hidden mt-4">
-    <div class="text-sm mb-1">Exportando: <span id="progress-value">0%</span></div>
-    <div class="w-full bg-gray-300 rounded h-3 overflow-hidden">
-      <div id="progress-bar" class="h-3 bg-green-500 w-0"></div>
+    <div id="progress-container" class="hidden mb-6">
+      <div class="text-sm mb-1">Exportando: <span id="progress-value">0%</span></div>
+      <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+        <div id="progress-bar" class="h-4 bg-green-500 w-0 transition-all duration-300 ease-in-out"></div>
+      </div>
     </div>
+
+    <section id="detected-frames" class="mb-8">
+      <h2 class="text-xl font-bold text-gray-700 mb-4">🖼️ Telas Selecionadas</h2>
+      <div id="frame-list" class="space-y-6"></div>
+    </section>
+
+    <section id="images-only-container" class="mb-8 hidden">
+      <h2 class="text-xl font-bold text-gray-700 mb-4">🖼️ Imagens Detectadas</h2>
+      <div id="image-preview-list" class="flex flex-wrap gap-6"></div>
+      <button id="download-images-zip" class="mt-6 bg-green-700 hover:bg-green-800 text-white px-5 py-2 rounded-full shadow">Baixar ZIP com imagens</button>
+    </section>
+
+    <section id="preview-container" class="mb-8">
+      <h2 class="text-xl font-bold text-gray-700 mb-4">🔍 Pré-visualização</h2>
+      <img id="preview-image" class="border-2 rounded-xl max-w-full shadow-lg" alt="Prévia do frame" />
+    </section>
+
+    <section id="xml-container" class="mb-8 bg-white rounded-xl p-6 border shadow max-h-80 overflow-auto">
+      <h2 class="text-xl font-bold text-gray-700 mb-4">📝 Arquivos XML Gerados</h2>
+      <div id="xml-list" class="space-y-6"></div>
+    </section>
+
+    <section id="download-container" class="hidden text-center">
+      <a id="download-link" class="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full shadow text-lg font-medium" href="#" download="android-export.zip">📦 Baixar ZIP com todos arquivos</a>
+    </section>
   </div>
-
-  <!-- Seção para mostrar as telas selecionadas -->
-  <section id="detected-frames" class="mt-6">
-    <h2 class="text-lg font-semibold mb-2">Telas Selecionadas</h2>
-    <div id="frame-list" class="space-y-4"></div>
-  </section>
-
-  <!-- Preview da primeira tela exportada -->
-  <section id="preview-container" class="mt-6">
-    <h2 class="text-lg font-semibold mb-2">Pré-visualização</h2>
-    <img id="preview-image" class="border rounded max-w-full shadow" alt="Prévia do frame" />
-  </section>
-
-  <!-- Exibição dos arquivos XML gerados -->
-  <section id="xml-container" class="mt-6 max-h-60 overflow-auto bg-white rounded p-4 border shadow">
-    <h2 class="text-lg font-semibold mb-2">Arquivos XML Gerados</h2>
-    <div id="xml-list" class="space-y-4"></div>
-  </section>
-
-  <!-- Link para download do ZIP -->
-  <section id="download-container" class="mt-6 hidden">
-    <a id="download-link"
-       class="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
-       href="#" download="android-export.zip">
-      Baixar ZIP com todos arquivos
-    </a>
-  </section>
 
   <script>
-   document.getElementById("export").onclick = () => {
-      parent.postMessage({ pluginMessage: { type: 'export-android' } }, '*');
+    // Função para limpar nomes e criar IDs válidos
+    function cleanId(name) {
+      return name.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, '');
+    }
 
+    // Ao clicar em "Exportar"
+    document.getElementById("export").onclick = () => {
+      parent.postMessage({ pluginMessage: { type: 'export-android' } }, '*');
       document.getElementById("alert").textContent = "Exportando...";
       document.getElementById("progress-container").classList.remove("hidden");
       document.getElementById("progress-bar").style.width = "0%";
@@ -63,8 +69,11 @@
       document.getElementById("frame-list").innerHTML = "";
       document.getElementById("preview-image").src = "";
       document.getElementById("download-container").classList.add("hidden");
+      document.getElementById("images-only-container").classList.add("hidden");
+      document.getElementById("image-preview-list").innerHTML = "";
     };
 
+    // Manipulação das mensagens recebidas do plugin
     window.onmessage = async (event) => {
       const msg = event.data.pluginMessage;
       if (!msg) return;
@@ -74,11 +83,13 @@
         document.getElementById("progress-bar").style.width = msg.percent + "%";
         document.getElementById("progress-value").textContent = msg.percent + "%";
       }
-
       else if (msg.type === "frames-detected") {
+        // Armazena os frames para usar nas outras funções
+        window.detectedFrames = msg.frames || [];
         const frameList = document.getElementById("frame-list");
         frameList.innerHTML = "";
 
+        // Para cada frame, cria container com preview e lista de elementos
         msg.frames.forEach(frame => {
           const container = document.createElement("div");
           container.className = "border rounded p-4 bg-white shadow";
@@ -97,6 +108,7 @@
           header.appendChild(info);
           container.appendChild(header);
 
+          // Lista dos elementos (inputs, buttons, imagens...)
           const list = document.createElement("ul");
           list.className = "text-sm list-disc pl-6 space-y-1";
 
@@ -105,96 +117,48 @@
             li.innerHTML = `<strong>${el.nome}</strong> → <code>${el.tipo}</code>`;
             list.appendChild(li);
           });
-
           container.appendChild(list);
+
+          // Galeria das imagens inseridas
+          const imagensInseridas = frame.elementos.filter(el => el.tipo === "ImageView" || el.tipo === "ImageButton");
+          if (imagensInseridas.length > 0) {
+            const galleryTitle = document.createElement("h4");
+            galleryTitle.textContent = "Imagens detectadas";
+            galleryTitle.className = "mt-4 font-semibold";
+            container.appendChild(galleryTitle);
+
+            const gallery = document.createElement("div");
+            gallery.className = "flex flex-wrap gap-3 mt-2";
+
+            imagensInseridas.forEach(imgEl => {
+              const cleanName = cleanId(imgEl.nome);
+              const base64img = frame.imagensBase64 ? frame.imagensBase64[cleanName] : null;
+
+              const imgTag = document.createElement("img");
+              imgTag.className = "w-20 h-20 object-cover border rounded shadow";
+              if (base64img) {
+                imgTag.src = "data:image/png;base64," + base64img;
+              } else {
+                imgTag.alt = "Imagem não disponível";
+                imgTag.style.backgroundColor = "#ddd";
+              }
+
+              const caption = document.createElement("p");
+              caption.className = "text-xs mt-1 text-center";
+              caption.textContent = imgEl.nome;
+
+              const wrapper = document.createElement("div");
+              wrapper.className = "flex flex-col items-center";
+              wrapper.appendChild(imgTag);
+              wrapper.appendChild(caption);
+
+              gallery.appendChild(wrapper);
+            });
+            container.appendChild(gallery);
+          }
           frameList.appendChild(container);
         });
-      }else if (msg.type === "frames-detected") {
-  const frameList = document.getElementById("frame-list");
-  frameList.innerHTML = "";
-
-  msg.frames.forEach(frame => {
-    const container = document.createElement("div");
-    container.className = "border rounded p-4 bg-white shadow";
-
-    const header = document.createElement("div");
-    header.className = "flex items-center space-x-4 mb-4";
-
-    const img = document.createElement("img");
-    img.src = "data:image/png;base64," + frame.preview;
-    img.className = "w-28 h-auto border rounded shadow";
-
-    const info = document.createElement("div");
-    info.innerHTML = `<h3 class="font-semibold text-lg">${frame.nome}</h3>`;
-
-    header.appendChild(img);
-    header.appendChild(info);
-    container.appendChild(header);
-
-    // Lista dos elementos (inputs, buttons, imagens...)
-    const list = document.createElement("ul");
-    list.className = "text-sm list-disc pl-6 space-y-1";
-
-    frame.elementos.forEach(el => {
-      const li = document.createElement("li");
-      li.innerHTML = `<strong>${el.nome}</strong> → <code>${el.tipo}</code>`;
-      list.appendChild(li);
-    });
-    container.appendChild(list);
-
-    // NOVO: Galeria das imagens inseridas (com nome correto)
-    const imagensInseridas = frame.elementos.filter(el => el.tipo === "ImageView" || el.tipo === "ImageButton");
-
-    if (imagensInseridas.length > 0) {
-      const galleryTitle = document.createElement("h4");
-      galleryTitle.textContent = "Imagens detectadas";
-      galleryTitle.className = "mt-4 font-semibold";
-      container.appendChild(galleryTitle);
-
-      const gallery = document.createElement("div");
-      gallery.className = "flex flex-wrap gap-3 mt-2";
-
-      imagensInseridas.forEach(imgEl => {
-        // Aqui você precisa ter a imagem base64 real para mostrar a miniatura.
-        // Supondo que no objeto frame venha um campo "imagensBase64" com nomes e base64
-        // Por enquanto, vamos usar uma imagem placeholder caso não tenha base64
-
-        // Buscar base64 da imagem pela chave do nome limpo
-        const cleanName = imgEl.nome.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, '');
-        const base64img = (frame.imagensBase64 && frame.imagensBase64[cleanName]) || null;
-
-        const imgTag = document.createElement("img");
-        imgTag.className = "w-20 h-20 object-cover border rounded shadow";
-        if (base64img) {
-          imgTag.src = "data:image/png;base64," + base64img;
-        } else {
-          // Imagem placeholder, pois base64 não foi enviada
-          imgTag.alt = "Imagem não disponível";
-          imgTag.style.backgroundColor = "#ddd";
-        }
-
-        const caption = document.createElement("p");
-        caption.className = "text-xs mt-1 text-center";
-        caption.textContent = imgEl.nome;
-
-        const wrapper = document.createElement("div");
-        wrapper.className = "flex flex-col items-center";
-        wrapper.appendChild(imgTag);
-        wrapper.appendChild(caption);
-
-        gallery.appendChild(wrapper);
-      });
-
-      container.appendChild(gallery);
-    }
-
-    frameList.appendChild(container);
-  });
-}
-
-      
-      
-
+      }
       else if (msg.type === "zip-package") {
         document.getElementById("alert").textContent = "Exportação concluída!";
         document.getElementById("progress-container").classList.add("hidden");
@@ -206,6 +170,7 @@
         const xmlList = document.getElementById("xml-list");
         xmlList.innerHTML = "";
 
+        // Lista arquivos XML com botão para baixar individualmente
         for (const [fileName, content] of Object.entries(msg.xmls)) {
           const container = document.createElement("div");
           container.classList.add("border", "rounded", "p-2", "bg-gray-100", "shadow");
@@ -237,7 +202,7 @@
           xmlList.appendChild(container);
         }
 
-        // Gerar ZIP para download
+        // Gerar ZIP para download com XMLs e imagens
         const zip = new JSZip();
         const xmlFolder = zip.folder("xml");
         for (const [fileName, content] of Object.entries(msg.xmls)) {
@@ -258,6 +223,85 @@
         document.getElementById("download-container").classList.remove("hidden");
       }
     };
+
+    // Exportar apenas imagens
+    const exportImagesBtn = document.getElementById('export-images');
+    const imagePreviewList = document.getElementById('image-preview-list');
+    const imagesContainer = document.getElementById('images-only-container');
+
+   exportImagesBtn.addEventListener("click", () => {
+  imagePreviewList.innerHTML = "";
+  imagesContainer.classList.remove("hidden");
+
+  if (!window.detectedFrames || window.detectedFrames.length === 0) {
+    imagePreviewList.innerHTML = '<p class="text-sm text-gray-600">Nenhuma imagem detectada.</p>';
+    return;
+  }
+
+  const detectedImages = [];
+
+  window.detectedFrames.forEach(frame => {
+    if (!frame.elementos) return;
+    const imgs = frame.elementos.filter(el => el.tipo === "ImageView" || el.tipo === "ImageButton");
+    imgs.forEach(imgEl => {
+      const cleanName = cleanId(imgEl.nome);
+      const base64img = frame.imagensBase64 ? frame.imagensBase64[cleanName] : null;
+      if (base64img) {
+        detectedImages.push({ nome: imgEl.nome, imageData: "data:image/png;base64," + base64img });
+      }
+    });
+  });
+
+  if (detectedImages.length === 0) {
+    imagePreviewList.innerHTML = '<p class="text-sm text-gray-600">Nenhuma imagem detectada.</p>';
+    return;
+  }
+
+  detectedImages.forEach(el => {
+    const img = document.createElement("img");
+    img.src = el.imageData;
+    img.alt = el.nome;
+    img.className = "w-32 h-32 object-contain border rounded-xl shadow m-2";
+
+    const label = document.createElement("p");
+    label.className = "text-xs mt-2 text-center text-gray-700";
+    label.textContent = el.nome;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "flex flex-col items-center";
+    wrapper.appendChild(img);
+    wrapper.appendChild(label);
+
+    imagePreviewList.appendChild(wrapper);
+  });
+
+  const downloadImagesZip = document.getElementById('images-only-container');
+  downloadImagesZip.style.display = 'inline-block'; // Mostrar botão se estiver oculto
+
+  // Scroll suave até o botão de download das imagens
+  downloadImagesZip.scrollIntoView({ behavior: 'smooth'});
+
+  downloadImagesZip.onclick = () => {
+    const zip = new JSZip();
+    const folder = zip.folder("drawable");
+
+    detectedImages.forEach(img => {
+      const base64 = img.imageData.split(",")[1];
+      const fileName = cleanId(img.nome) + ".png";
+      folder.file(fileName, base64, { base64: true });
+    });
+
+    zip.generateAsync({ type: "blob" }).then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "imagens-exportadas.zip";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  };
+});
+
   </script>
 </body>
 </html>

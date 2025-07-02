@@ -136,7 +136,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
 
   let extraProps = '';
 
-  if ((tag === 'RelativeLayout' || tag === 'View' || tag === 'EditText'  || tag === 'ImageButton') &&
+  if ((tag === 'RelativeLayout' || tag === 'View' || tag === 'EditText' ) &&
       node.fills && node.fills.length > 0) {
     const fill = node.fills[0];
     if (fill.type === 'SOLID') {
@@ -215,22 +215,19 @@ if (tag === 'Button' || tag === 'TextView') {
     const src = getImageSrcFromOverlap(node, siblings, processed, id);
     extraProps += `\n      android:src="${src}"`;
     extraProps += `\n      app:layout_constraintEnd_toEndOf="parent"`;
-    extraProps += `\n      android:layout_width="${width}dp"`;
+ 
   }
 
   if (tag === 'ImageView') {
     extraProps += `\n      android:src="@drawable/${id}"`;
     extraProps += `\n      android:scaleType="centerCrop"`;
-    extraProps += `\n      android:layout_width="${width}dp"`;
-  }
-
-  if (tag === 'TextView') {
-    extraProps += `\n      android:layout_width="wrap_content"`;
+    
   }
 
   return `\n    <${tag}` +
     `\n      android:id="@+id/${id}"` +
     `\n      android:layout_height="${height}dp"` +
+    `\n       android:layout_width="${width}dp"` +
     `\n      app:layout_constraintTop_toTopOf="parent"` +
     `\n      app:layout_constraintStart_toStartOf="parent"` +
     `\n      android:layout_marginTop="${y}dp"` +
@@ -255,6 +252,7 @@ function getImageSrcFromOverlap(node, siblings, processed, fallbackId) {
   console.log(`⚠️ Nenhuma imagem sobreposta encontrada para ${fallbackId}`);
   return `@drawable/${fallbackId}`;
 }
+
 
 figma.ui.onmessage = async (msg) => {
   if (msg.type === 'export-android') {
@@ -298,4 +296,6 @@ figma.ui.onmessage = async (msg) => {
       preview
     });
   }
+
+
 };
