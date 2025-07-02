@@ -1,5 +1,4 @@
-# BMS-Plugin-Export
-# Figma to Android XML Exporter 📲
+# BMS-Plugin-Export  
 
 Este é um plugin para **Figma** que converte automaticamente seus protótipos em **layouts XML compatíveis com Android Studio**, utilizando **ConstraintLayout** como base.
 
@@ -14,7 +13,12 @@ O objetivo é facilitar o processo de transformar protótipos visuais em código
 ✅ Faz **detecção automática de Hints** (textos sobrepostos aos campos de entrada viram `android:hint`)  
 ✅ Exporta **imagens** dos elementos (em Base64 para uso como drawables)  
 ✅ Gera um **preview em PNG** de cada frame exportado  
-✅ Exporta tudo em um **pacote ZIP** pronto para download
+✅ Exporta tudo em um **pacote ZIP** pronto para download  
+✅ **Galeria visual** das imagens detectadas dentro dos frames  
+✅ Botão dedicado para **exportar apenas imagens**, gerando ZIP somente com elas  
+✅ Interface com barra de progresso e mensagens claras durante a exportação  
+✅ Rolagem suave que leva o usuário diretamente ao botão de download das imagens após a exportação  
+✅ Visualização dos arquivos XML gerados com opção de baixar cada um separadamente  
 
 ---
 
