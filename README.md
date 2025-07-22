@@ -50,7 +50,50 @@ Se houver um texto "Digite seu nome" posicionado sobre um retângulo nomeado com
     android:hint="Digite seu nome" />
 
  ```
-# As Funções no Código (code.js)
+## 🧩 Como Instalar o Plugin no seu Figma (Modo Desenvolvedor)
+
+1. Acesse o [repositório do plugin no GitHub](https://github.com/seu-usuario/seu-repositorio) e baixe os arquivos como `.zip`.
+2. Extraia os arquivos em uma pasta local do seu computador (caso tenha baixado o .zip).
+
+3. Abra o Figma e faça login na sua conta.
+
+4. Clique no menu do canto superior esquerdo (ícone do Figma) → Plugins → Development → Import Plugin from Manifest...
+
+5. Selecione o arquivo manifest.json dentro da pasta do plugin que você extraiu ou clonou.
+
+6. O plugin será adicionado à sua lista de plugins locais como um plugin em desenvolvimento.
+
+### Agora, para usá-lo:
+
+1. Abra qualquer arquivo no Figma.
+
+2. Vá em Plugins → Development → BMS Plugin Export.
+   
+---
+
+> ✅ **Nota:** Este método é totalmente funcional e recomendado enquanto o plugin não está disponível na Figma Community.  
+> Você pode usar à vontade via **modo desenvolvedor** no Figma!
+
+---
+
+# Como usar
+1. Selecione um ou mais frames no seu arquivo Figma.
+
+2. Abra o plugin BMS-Plugin-Export.
+
+3. Clique em "Exportar para Android".
+
+4. Aguarde a exportação e o processamento.
+
+5. Baixe o arquivo ZIP com os arquivos XML e as imagens.
+
+6. Importe os arquivos XML no Android Studio em seu projeto.
+
+
+---
+# 👩‍💻As Funções no Código (code.js)
+Mais informações sobre desenvolvimento de plugins para Figma podem ser consultadas na documentação oficial:
+[Figma Plugin Docs](https://www.figma.com/plugin-docs/)
 
 ### figma.showUI(__html__, { width: 600, height: 600 });
 - PT: Exibe a interface do plugin com tamanho definido.
