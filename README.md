@@ -49,7 +49,7 @@ Se houver um texto "Digite seu nome" posicionado sobre um retângulo nomeado com
     ...
     android:hint="Digite seu nome" />
 
-
+ ```
 # As Funções no Código (code.js)
 
 ### figma.showUI(__html__, { width: 600, height: 600 });
