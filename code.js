@@ -154,11 +154,11 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
   }
   if (tag === 'EditText') {
     for (const other of siblings) {
-      // 🟢 CORREÇÃO AQUI: Agora só pega texto que esteja na lista de sobrepostos
+      // só pega texto que esteja na lista de sobrepostos
       if (
         other.id !== node.id &&
         isOverlapping(other, node) &&
-        textsSobrepostos.includes(other.id) &&           // ✅ Alterado aqui
+        textsSobrepostos.includes(other.id) &&         
         'characters' in other
       ) {
         const hintText = escapeXML(other.characters);
@@ -198,7 +198,7 @@ if (tag === 'Button' || tag === 'TextView') {
   fontSize = Math.round(fontSize);
 
   let fontColor = '000000';
-  // 🟢 CORREÇÃO: Só pegar a cor se for um node de texto (com characters)
+  //  Só pegar a cor se for um node de texto (com characters)
   if ('characters' in node && node.fills && node.fills.length > 0) {
     const fill = node.fills[0];
     if (fill.type === 'SOLID') {
