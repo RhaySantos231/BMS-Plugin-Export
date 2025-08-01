@@ -1,4 +1,4 @@
-# BMS-Plugin-Export: Exportação de Interfases Figma para Android
+# BMS-Plugin-Export: Exportação de Interfaces Figma para Android
 
 Este é um plugin para **Figma** que converte automaticamente seus protótipos em **layouts XML compatíveis com Android Studio**, utilizando **ConstraintLayout** como base.
 
