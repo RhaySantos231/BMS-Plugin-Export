@@ -149,7 +149,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
     const fill = node.fills[0];
     if (fill.type === 'SOLID') {
       const hexColor = rgbToHex(fill.color.r, fill.color.g, fill.color.b);
-      extraProps += `\n      android:backgroundTint="#${hexColor}"`;
+      extraProps += `\n      android:background="#${hexColor}"`;
     }
   }
   if (tag === 'EditText') {
@@ -163,9 +163,10 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
       ) {
         const hintText = escapeXML(other.characters);
         extraProps += `\n      android:hint="${hintText}"`;
+        extraProps += `\n      android:textSize="15sp"`;
         extraProps += `\n      android:padding="10dp"`;
         extraProps += `\n      android:paddingStart="15dp"`;
-        extraProps += `\n      android:layout_width="${width}dp"`;
+      
         break;
       }
     }
@@ -177,7 +178,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
         if ('characters' in other && other.characters) {
           const Text = escapeXML(other.characters);
           extraProps += `\n      android:text="${Text}"`;
-          extraProps += `\n      android:layout_width="${width}dp"`;
+          extraProps += `\n  android:gravity="center"`;
           textsSobrepostos.push(other.id);
           processed.push(other.id);
           break;
@@ -189,7 +190,7 @@ function exportNodeToXML(node, siblings, textsSobrepostos = [], processed = []) 
 if (tag === 'Button' || tag === 'TextView') {
   if (content) extraProps += `\n      android:text="${content}"`;
 
-  let fontSize = 14;
+  let fontSize = 15;
   if ('fontSize' in node && node.fontSize) {
     fontSize = node.fontSize;
   } else if (node.getRangeFontSize) {

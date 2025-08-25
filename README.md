@@ -50,6 +50,7 @@ Se houver um texto "Digite seu nome" posicionado sobre um retângulo nomeado com
     android:hint="Digite seu nome" />
 
  ```
+<<<<<<< HEAD
 ## 🧩 Como Instalar o Plugin no seu Figma (Modo Desenvolvedor)
 
 1. Acesse o [repositório do plugin no GitHub](https://github.com/seu-usuario/seu-repositorio) e baixe os arquivos como `.zip`.
@@ -94,6 +95,10 @@ Se houver um texto "Digite seu nome" posicionado sobre um retângulo nomeado com
 # 👩‍💻As Funções no Código (code.js)
 Mais informações sobre desenvolvimento de plugins para Figma podem ser consultadas na documentação oficial:
 [Figma Plugin Docs](https://www.figma.com/plugin-docs/)
+=======
+ ---
+# As Funções no Código (code.js)
+>>>>>>> 6501a8f (Detalhes)
 
 ### figma.showUI(__html__, { width: 600, height: 600 });
 - PT: Exibe a interface do plugin com tamanho definido.
